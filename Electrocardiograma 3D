@@ -1,0 +1,66 @@
+Electrocardiograma en 3D
+import numpy as np
+import cv2
+from skimage.feature import greycomatrix, greycoprops
+from sklearn.model_selection import train_test_split
+from sklearn.svm import SVC
+from sklearn.metrics import accuracy_score
+
+# Paso 1: Obtener los registros ECG de pacientes control y pacientes con ESRD (código omitido)
+
+# Paso 2: Preprocesamiento de las imágenes ECG3D
+def preprocess_ecg_image(ecg_image):
+    # Aplicar preprocesamiento de la imagen según sea necesario
+    # (por ejemplo, filtrado, ajuste de contraste, etc.)
+    preprocessed_image = ecg_image  # Placeholder, reemplazar con el preprocesamiento real
+    return preprocessed_image
+
+# Paso 3: Extracción de características utilizando GLCM
+def extract_glcm_features(ecg_image):
+    # Convertir la imagen a escala de grises
+    gray_image = cv2.cvtColor(ecg_image, cv2.COLOR_BGR2GRAY)
+    
+    # Calcular la matriz GLCM
+    glcm = greycomatrix(gray_image, [1], [0, np.pi/4, np.pi/2, 3*np.pi/4], symmetric=True, normed=True)
+    
+    # Calcular propiedades estadísticas de la matriz GLCM
+    contrast = greycoprops(glcm, 'contrast').ravel()
+    energy = greycoprops(glcm, 'energy').ravel()
+    homogeneity = greycoprops(glcm, 'homogeneity').ravel()
+    correlation = greycoprops(glcm, 'correlation').ravel()
+    
+    # Concatenar las características en un vector
+    features = np.concatenate((contrast, energy, homogeneity, correlation))
+    
+    return features
+
+# Paso 4: Dividir el conjunto de datos en entrenamiento y prueba
+X = []  # Lista para almacenar las características de las imágenes
+y = []  # Lista para almacenar las etiquetas (0 para pacientes control, 1 para pacientes con ESRD)
+
+# Recorrer todas las imágenes y extraer características
+for image_path in ecg_image_paths:
+    ecg_image = cv2.imread(image_path)
+    preprocessed_image = preprocess_ecg_image(ecg_image)
+    features = extract_glcm_features(preprocessed_image)
+    X.append(features)
+    
+    # Determinar la etiqueta de la imagen según el tipo de paciente (control o ESRD)
+    label = get_label(image_path)
+    y.append(label)
+
+# Convertir las listas a matrices numpy
+X = np.array(X)
+y = np.array(y)
+
+# Dividir el conjunto de datos en entrenamiento y prueba
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+
+# Paso 5: Entrenar y evaluar un clasificador SVM
+svm = SVC()
+svm.fit(X_train, y_train)
+y_pred = svm.predict(X_test)
+
+# Calcular la precisión del clasificador
+accuracy = accuracy_score(y_test, y_pred)
+print("Precisión del clasificador SVM: {:.2f}".format(accuracy))
